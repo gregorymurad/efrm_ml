@@ -17,6 +17,8 @@ from sklearn.preprocessing import StandardScaler
 import streamlit as st
 import pydeck as pdk
 
+
+
 make_graph = True #Set it to true if you want to use the make_graph.py as an auxiliary function
 save_heatmap = True #Heat map graph
 save_water_features = True #Water features graph
@@ -76,6 +78,7 @@ bbc_nov_2022_2 = "Logs/BBC/13 - Biscayne Bay - November 16th 2022/11-16-22-missi
 st.set_page_config(
     page_title="Machine Learning Methods",
     layout="wide",
+    initial_sidebar_state="collapsed"
 )
 def selectDataframe(dataset: str, selected_parameters: List[str]):
     entire_ds = pd.read_csv(dataset) # read the entire dataset as a dataframe
@@ -275,6 +278,16 @@ if __name__ == '__main__':
     # Choose the database in here. e.g.: bbc_nov_2022_1
     st.title("Machine Learning Estimator for Water Quality Data")
     st.markdown("""---""")
+
+    st.sidebar.title("Community Outreach")
+    st.sidebar.header("Enter your dataset to be analyzed")
+    st.sidebar.file_uploader("Please use .csv files only")
+    st.sidebar.markdown("""We are actively working on a feature that will allow you to upload your own datasets in CSV format for analysis. This upcoming functionality aims to provide you with the flexibility to use our analytical tools and get info on your own data, having a more personalized user experience.
+        \n- Security and Privacy
+        As we develop this feature, our top priority is ensuring the security and privacy of your data. We are implementing security measures to safeguard your information at every step.
+        \n- Under Development
+        Please note that this feature is currently under development. We are working hard to bring it to you as soon as possible, with all the necessary precautions in place to ensure a secure and user-friendly environment for data upload and analysis.
+        \nWe appreciate your patience and encourage you to stay tuned for updates on this exciting new addition to our platform!""")
     partial_ds, entire_ds, ds_name = getDataframe(bbc_oct_2022_1)
     zoom_lat = partial_ds['lat'].mean()
     zoom_long = partial_ds['lon'].mean()
@@ -407,13 +420,33 @@ if __name__ == '__main__':
         st.write("Coastal regions globally are experiencing rapid transformations due to climate change and anthropogenic impacts, necessitating robust monitoring systems. Autonomous surface and underwater robots (ASV and AUV) have emerged as important tools for high-resolution, large-scale data collection on water properties. However, these robots often face challenges from faulty or missing sensor data, affecting data accuracy and robot functionality. This paper explores the use of machine learning techniques to estimate water property parameters, addressing the challenges of missing or faulty data. By focusing on Biscayne Bay, Florida, this study uses linear regression, random forest, support vector regression, and multilayer perceptron, to predict parameters like dissolved oxygen, pH, and temperature. Initial results indicate the potential of these models to enhance data consistency and offer new perspectives for sensor fusion approaches.")
 
         st.image("fishkill.png")
-        st.caption("Pictures of the fish kill in South Florida.")
+        st.caption("Pictures of the fish kill in South Florida between 2020 and 2022.")
+
+        heatmap_check = st.expander("Heatmap")
+        with heatmap_check:
+            st.markdown("""
+                    This heatmap visually represents the correlations between different water property parameters studied in the Biscayne Bay area. Each cell in the grid shows the correlation coefficient between the parameters on its corresponding row and column. The correlation coefficient values range between -1 and +1, where:
+
+                    - +1 indicates a perfect positive linear relationship: as one parameter increases, the other parameter increases proportionally.
+                    - -1 indicates a perfect negative linear relationship: as one parameter increases, the other parameter decreases proportionally.
+                    - 0 indicates no linear relationship: changes in one parameter do not predict changes in the other parameter.
+                    The color gradient, ranging from blue (negative correlation) to red (positive correlation), facilitates a quick visual assessment of the relationships between parameters. Darker shades of blue or red indicate stronger negative or positive correlations, respectively, while lighter shades or white indicate weaker correlations.
+
+                    By analyzing this heatmap, researchers and policymakers can identify which parameters are strongly related and thus better understand the complex interdependencies between different aspects of water quality in the region. This, in turn, can guide more informed decision-making in environmental monitoring and conservation efforts.
+                    """)
+            heatmap = generateCorrHeatmap(partial_ds, 'pearson',
+                                          ['Latitude', 'Longitude', 'ODO $[ml/l]$', 'Temp $[°C]$', 'pH',
+                                           'Water\n Column $[m]$'],
+                                          {'annot': True, 'xticklabels': True, 'yticklabels': True, 'cmap': 'coolwarm'})
+            fig2 = heatmap.get_figure()
+
+            st.pyplot(fig2)
 
     with col6:
         st.subheader("Parameter Estimation with Advanced ML Techniques")
         main_form = st.form("main_form")
         with main_form:
-            chosenParameter = st.selectbox("Choose a list a target parameter",options=
+            chosenParameter = st.selectbox("Choose a parameter to be estimated",options=
             ['Temperature (c)','pH','ODO mg/L'])
 
             submit = st.form_submit_button("Submit")
@@ -438,7 +471,7 @@ if __name__ == '__main__':
                 models = [
                     ("Linear Regression", LinearRegression(), parameters[0]),
                     ("Random Forest Regressor", RandomForestRegressor(random_state=r_st), parameters[1]),
-                    ("Support Vector Regresors", SVR(), parameters[2]),
+                    ("Support Vector Regressors", SVR(), parameters[2]),
                     ("Multi-Layer Perceptron", MLPRegressor(random_state=r_st), parameters[3]),
                 ]
                 with st.spinner('🦾🤖 Machine Learning at Work 🚀 Brewing the Perfect Estimations...🧠💡'):
@@ -462,22 +495,3 @@ if __name__ == '__main__':
                 List_y=partial_ds['Temperature (c)']
                 target = 'Temperature (c)'
                 run_machine_learning(List_x, List_y, target)
-        heatmap_check = st.expander("Heatmap")
-        with heatmap_check:
-            st.markdown("""
-            This heatmap visually represents the correlations between different water property parameters studied in the Biscayne Bay area. Each cell in the grid shows the correlation coefficient between the parameters on its corresponding row and column. The correlation coefficient values range between -1 and +1, where:
-
-            - +1 indicates a perfect positive linear relationship: as one parameter increases, the other parameter increases proportionally.
-            - -1 indicates a perfect negative linear relationship: as one parameter increases, the other parameter decreases proportionally.
-            - 0 indicates no linear relationship: changes in one parameter do not predict changes in the other parameter.
-            The color gradient, ranging from blue (negative correlation) to red (positive correlation), facilitates a quick visual assessment of the relationships between parameters. Darker shades of blue or red indicate stronger negative or positive correlations, respectively, while lighter shades or white indicate weaker correlations.
-            
-            By analyzing this heatmap, researchers and policymakers can identify which parameters are strongly related and thus better understand the complex interdependencies between different aspects of water quality in the region. This, in turn, can guide more informed decision-making in environmental monitoring and conservation efforts.
-            """)
-            heatmap = generateCorrHeatmap(partial_ds, 'pearson',
-                                          ['Latitude', 'Longitude', 'ODO $[ml/l]$', 'Temp $[°C]$', 'pH',
-                                           'Water\n Column $[m]$'],
-                                          {'annot': True, 'xticklabels': True, 'yticklabels': True, 'cmap': 'coolwarm'})
-            fig2 = heatmap.get_figure()
-
-            st.pyplot(fig2)
